@@ -1,0 +1,47 @@
+name: Sync Releases
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 00:00 运行
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get latest release info
+        id: get_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_RELEASE=$(gh release list --repo rcmaehl/WhyNotWin11 --limit 1 --json tagName --jq '.[0].tagName')
+          echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_ENV
+
+      - name: Check if release already exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING_RELEASE=$(gh release list --repo klcb2010/WhyNotWin11 --json tagName --jq '.[].tagName' | grep -Fx "$LATEST_RELEASE" || true)
+          if [ -n "$EXISTING_RELEASE" ]; then
+            echo "Release $LATEST_RELEASE already exists. Exiting..."
+            exit 0
+          fi
+
+      - name: Download latest release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p assets
+          gh release view "$LATEST_RELEASE" --repo rcmaehl/WhyNotWin11 --json assets --jq '.assets[].url' | while read -r url; do
+            wget --header="Authorization: token $GH_TOKEN" -P assets "$url"
+          done
+
+      - name: Create new release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$LATEST_RELEASE" assets/* --repo klcb2010/WhyNotWin11 --title "$LATEST_RELEASE" --notes "Auto-synced from upstream."
