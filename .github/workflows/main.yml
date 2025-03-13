@@ -29,6 +29,7 @@ jobs:
           echo "Latest release: $LATEST_RELEASE"
 
       - name: Check if this release already exists in this repo
+        id: check_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -36,11 +37,14 @@ jobs:
           EXISTING_RELEASE=$(gh release list --repo klcb2010/WhyNotWin11 --json tagName --jq ".[].tagName" | grep -Fx "$LATEST_RELEASE" || true)
           if [ -n "$EXISTING_RELEASE" ]; then
             echo "Release $LATEST_RELEASE already exists. Skipping sync."
-            exit 0
+            echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "Release $LATEST_RELEASE does not exist. Proceeding to create new release."
+            echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
           fi
-          echo "Release $LATEST_RELEASE does not exist. Proceeding to create new release."
 
       - name: Download latest release assets from upstream
+        if: env.RELEASE_EXISTS == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -52,6 +56,7 @@ jobs:
           done
 
       - name: Create new release in this repo
+        if: env.RELEASE_EXISTS == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
