@@ -37,12 +37,13 @@ jobs:
             echo "Release $LATEST_RELEASE already exists. Skipping sync."
             exit 0
           }
+          echo "Release $LATEST_RELEASE does not exist. Proceeding to create new release."
 
       - name: Download latest release assets from upstream
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Downloading assets for $LATEST_RELEASE from upstream..."
+          echo "Downloading assets for release $LATEST_RELEASE from upstream..."
           mkdir -p assets
           gh release view "$LATEST_RELEASE" --repo rcmaehl/WhyNotWin11 --json assets --jq '.assets[].url' | while read -r url; do
             echo "Downloading $url"
