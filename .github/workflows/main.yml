@@ -33,10 +33,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Checking if release $LATEST_RELEASE already exists in this repo..."
-          gh release view "$LATEST_RELEASE" --repo klcb2010/WhyNotWin11 > /dev/null 2>&1 && {
+          EXISTING_RELEASE=$(gh release list --repo klcb2010/WhyNotWin11 --json tagName --jq ".[].tagName" | grep -Fx "$LATEST_RELEASE" || true)
+          if [ -n "$EXISTING_RELEASE" ]; then
             echo "Release $LATEST_RELEASE already exists. Skipping sync."
             exit 0
-          }
+          fi
           echo "Release $LATEST_RELEASE does not exist. Proceeding to create new release."
 
       - name: Download latest release assets from upstream
